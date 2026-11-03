@@ -1,0 +1,5 @@
+hardware-configuration.nix
+gitops-remote.url
+result
+result-*
+*.bak
