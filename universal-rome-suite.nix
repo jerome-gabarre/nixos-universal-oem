@@ -371,19 +371,16 @@ let
         let repo_dir = "/etc/nixos";
         let _ = fs::create_dir_all(repo_dir);
 
-        // 1. Garantie d'existence de l'introspection matérielle locale (jamais écrasée par Git)
         if !Path::new("/etc/nixos/hardware-configuration.nix").exists() {
             println!("[GitOps Rust] Génération initiale de /etc/nixos/hardware-configuration.nix...");
             let _ = Command::new(NIXOS_GEN_CFG).args(["--dir", repo_dir]).status();
         }
 
-        // 2. Détection dynamique de la cible Flake selon l'architecture CPU réelle
         let flake_target = match std::env::consts::ARCH {
             "aarch64" => "universal-arm64",
             _ => "universal",
         };
 
-        // 3. Synchronisation avec le dépôt Git distant si configuré (/etc/nixos/gitops-remote.url ou .git)
         let remote_cfg = fs::read_to_string("/etc/nixos/gitops-remote.url")
             .unwrap_or_default()
             .trim()
@@ -416,7 +413,6 @@ let
             return;
         }
 
-        // 4. Construction et activation atomique avec --impure pour lire /etc/nixos/hardware-configuration.nix
         let flake_uri = format!("/etc/nixos#{}", flake_target);
         println!("[GitOps Rust] Application déclarative de {}...", flake_uri);
 
@@ -500,6 +496,11 @@ in
   programs.appimage = {
     enable = true;
     binfmt = true;
+  };
+
+  programs.git = {
+    enable = true;
+    config.safe.directory = "/etc/nixos";
   };
 
   programs.nix-ld = {
@@ -660,6 +661,8 @@ in
     romeSoftwareStore
     romeSoftwareStoreDesktop
     osGitopsReconciler
+    wl-clipboard
+    xclip
     comma
     nix-index
     chromeRemoteDesktopWebApp

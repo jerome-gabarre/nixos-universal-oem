@@ -1629,7 +1629,7 @@ EOF
                 "rustdesk.service",
                 "os-gitops-reconciler.service",
                 "dns-threat-sinkhole.service",
-                "plocate-updatedb.service",
+                "update-locatedb.service",
             ];
 
             thread::scope(|s| {
