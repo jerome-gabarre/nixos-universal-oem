@@ -1,4 +1,4 @@
-# NixOS Universal OEM — Architecture Pyramidale GitOps (`x86_64` & `aarch64`)
+# NixOS Universal OEM — Architecture Pyramidale Souveraine (`x86_64` & `aarch64`)
 
 Système d'exploitation **NixOS déclaratif, universel et agnostique**, conçu pour fonctionner à performance maximale et sans fuite mémoire sur n'importe quel PC portable, station de travail, serveur ou machine reconditionnée (`x86_64-linux` et `aarch64-linux`).
 
@@ -28,37 +28,50 @@ Système d'exploitation **NixOS déclaratif, universel et agnostique**, conçu p
 * **Mode OEM Reconditionnement & Revente** :
   * Bureau **KDE Plasma 6 Wayland** pré-configuré au format Windows 11 sombre (`Fluent-dark`).
   * **Guide de Première Installation (`oem-first-boot-wizard`)** lancé automatiquement au premier démarrage d'un nouveau compte.
-  * **Remise d'usine en 1 clic (`factory-reset-pc`)** : Efface toutes les données personnelles, historiques, comptes Cloud et Wi-Fi, puis recrée un compte client neuf (`utilisateur` / mot de passe : `bienvenu`).
+  * **Remise d'usine en 1 clic (`factory-reset-pc`)** : Efface toutes les données personnelles, historiques, comptes Cloud, Wi-Fi et détache tout lien Git externe pour garantir une souveraineté totale au nouvel acquéreur.
 
 ---
 
-## 2. Déploiement Universel sur un Nouveau PC (`x86_64` ou `aarch64`)
+## 2. Gouvernance, Sécurité & Souveraineté Client (3 Modes d'Exploitation)
 
-Le dépôt dissocie totalement la configuration système (`configuration.nix`, `universal-rome-suite.nix`) de l'empreinte matérielle locale (`/etc/nixos/hardware-configuration.nix`). Vous pouvez déployer ce dépôt sur n'importe quelle machine disposant d'une installation NixOS minimale.
+Ce système d'exploitation garantit une **souveraineté totale** à son propriétaire. Aucune télémétrie ni aucun contrôle distant tiers n'est actif par défaut sur une machine livrée. L'orchestrateur Rust `os-gitops-reconciler` s'adapte automatiquement à **3 modèles d'exploitation** :
 
-### Sur un PC / Serveur `x86_64` (Intel / AMD)
+1. **Mode 1 — Souverain Autonome (Par défaut pour Particuliers B2C, Dons & Postes B2B Indépendants)** :
+   * Aucun fichier `/etc/nixos/gitops-remote.url` n'est présent (état automatique après l'outil `factory-reset-pc`).
+   * La machine est **100 % indépendante** : elle télécharge uniquement ses mises à jour de sécurité et de paquets directement auprès du cache officiel de la **Fondation NixOS** (`NixOS/nixpkgs`), avec possibilité de retour arrière instantané (*rollback*) au démarrage.
+2. **Mode 2 — Flotte d'Entreprise Souveraine (B2B / DSI Interne)** :
+   * Les directions informatiques (DSI) peuvent *forker* ce dépôt sur leur propre serveur Git interne (GitLab / GitHub Enterprise) et inscrire l'URL de leur dépôt interne dans `/etc/nixos/gitops-remote.url`.
+   * Tous les postes de l'entreprise se synchronisent alors automatiquement en tâche de fond (sur les `E-Cores`) avec la politique de sécurité interne de la DSI, sans coût de licence MDM.
+3. **Mode 3 — Infogérance / Parc Maître (Mainteneur ou Contrat de Maintenance dédié)** :
+   * Pour les machines rattachées à un contrat d'infogérance explicite, `/etc/nixos/gitops-remote.url` pointe sur le dépôt de référence validé. Si une modification locale non validée est présente dans `/etc/nixos`, le réconciliateur suspend automatiquement la synchronisation distante pour ne jamais écraser le travail d'un administrateur local.
 
-Exécutez ce bloc unique dans un terminal :
+---
+
+## 3. Installation Initiale sur un Nouveau PC (`x86_64` ou `aarch64`)
+
+Le dépôt dissocie la configuration système (`configuration.nix`, `universal-rome-suite.nix`) de l'empreinte matérielle locale (`/etc/nixos/hardware-configuration.nix`).
+
+### Installation en Mode 1 (Souverain Autonome — Recommandé pour Client Final / Don / B2B)
 
     sudo mv /etc/nixos/hardware-configuration.nix /tmp/hardware-configuration.nix.keep
     sudo rm -rf /etc/nixos/* /etc/nixos/.* 2>/dev/null || true
     sudo git clone https://github.com/jerome-gabarre/nixos-universal-oem.git /etc/nixos
+    sudo rm -rf /etc/nixos/.git
     sudo mv /tmp/hardware-configuration.nix.keep /etc/nixos/hardware-configuration.nix
-    echo "https://github.com/jerome-gabarre/nixos-universal-oem.git" | sudo tee /etc/nixos/gitops-remote.url
-    sudo git config --system --add safe.directory /etc/nixos
     sudo nixos-rebuild switch --flake /etc/nixos#universal --impure
 
-### Sur une Machine `ARM64` (`aarch64-linux`)
+*(Sur architecture ARM64 `aarch64-linux`, remplacez `#universal` par `#universal-arm64`).*
 
-Remplacez uniquement la cible finale par `#universal-arm64` :
+### Activation optionnelle du Mode 2 ou 3 (Synchronisation GitOps sur Parc Géré)
 
-    sudo nixos-rebuild switch --flake /etc/nixos#universal-arm64 --impure
+Pour rattacher un poste à un dépôt Git de flotte (DSI interne ou parc personnel) :
+
+    echo "URL_DU_DEPOT_GIT_INTERNE" | sudo tee /etc/nixos/gitops-remote.url
+    sudo systemctl start os-gitops-reconciler.service
 
 ---
 
-## 3. Commandes Utiles & Outils Intégrés
-
-### Applications Graphiques & Lanceurs Rapides
+## 4. Commandes Utiles & Outils Intégrés
 
 | Commande / Lanceur | Rôle |
 | :--- | :--- |
@@ -67,42 +80,14 @@ Remplacez uniquement la cible finale par `#universal-arm64` :
 | `ai-model-selector` | Ouvre le **Catalogue des Modèles IA ★** (changement de modèle GGUF à chaud) |
 | `cloud-accounts-manager` | Ouvre le **Hub Universel des Comptes & Clouds ☁️** (montage FUSE dans `~/Clouds`) |
 | `oem-first-boot-wizard` | Relance le **Guide de Première Installation** |
-| `factory-reset-pc` | Lance la **Remise à zéro d'usine (Mode Revente)** |
+| `factory-reset-pc` | Lance la **Remise à zéro d'usine (Mode Revente / Don — Active le Mode 1 Souverain)** |
 
 ### Diagnostic Matériel, Topologie & Audit IA (San Gen Shugi)
 
-    # Consulter la topologie matérielle détectée au démarrage (P-Cores, E-Cores, Cache L2, VRAM)
     cat /run/os-topology/env
-
-    # Consulter les paramètres dynamiques injectés dans Ollama
     cat /run/ollama-dynamic.env
-
-    # Lancer un audit matériel complet en Rust (9 sondes /proc & /sys + synthèse IA en 4 points)
     sudo systemctl start ai-system-auditor.service
     journalctl -u ai-system-auditor.service -n 35 --no-pager
-
-### Gestion et Réconciliation GitOps
-
-Le timer `os-gitops-reconciler.timer` vérifie automatiquement toutes les 6 heures si un nouveau commit a été poussé sur la branche `main` du dépôt GitHub et applique la mise à jour en tâche de fond sur les `E-Cores`.
-
-    # Déclencher une synchronisation GitOps immédiate
-    sudo systemctl start os-gitops-reconciler.service
-    journalctl -u os-gitops-reconciler.service -n 20 --no-pager
-
-    # Forcer une reconstruction complète même si le commit Git local est identique au distant
-    sudo os-gitops-reconciler --force
-
----
-
-## 4. Workflow Administrateur (Modifier et Publier une Mise à Jour)
-
-Lorsque vous modifiez la configuration sur votre machine maîtresse pour la propager à l'ensemble de vos machines :
-
-    cd /etc/nixos
-    sudo nixos-rebuild switch --flake /etc/nixos#universal --impure
-    git add flake.nix flake.lock configuration.nix universal-rome-suite.nix README.md
-    git commit -m "feat: description de la modification"
-    git push
 
 ---
 
@@ -110,5 +95,5 @@ Lorsque vous modifiez la configuration sur votre machine maîtresse pour la prop
 
 * `flake.nix` : Point d'entrée déclaratif multi-architecture (`universal` pour `x86_64-linux`, `universal-arm64` pour `aarch64-linux`) avec chargement dynamique du `/etc/nixos/hardware-configuration.nix` local.
 * `configuration.nix` : Noyau Zen/Latest, sécurité AppArmor/Auditd/ClamAV/AIDE/Lynis, gestion mémoire ZRAM/MGLRU/KSM, démon topologique Rust `hardware-max-overdrive`, auto-guérison `system-self-healer`, purge mémoire `memory-leak-reaper`, pile IA Ollama/Open-WebUI, Hub Cloud FUSE et bureau KDE Plasma 6 Windows 11.
-* `universal-rome-suite.nix` : Pont universel `nix-ld` + `AppImage`, démon de réconciliation Rust `os-gitops-reconciler`, démon permanent `rustdesk` et magasin logiciel Rust `rome-software-store` couvrant les 14 grands domaines ROME.
-* `.gitignore` : Exclut `hardware-configuration.nix` et `gitops-remote.url` pour garantir que le dépôt reste 100 % agnostique du matériel.
+* `universal-rome-suite.nix` : Pont universel `nix-ld` + `AppImage`, démon hybride Rust `os-gitops-reconciler` (Mode Souverain / Mode GitOps), démon permanent `rustdesk` et magasin logiciel Rust `rome-software-store` couvrant les 14 grands domaines ROME.
+* `.gitignore` : Exclut `hardware-configuration.nix` et `gitops-remote.url` pour garantir que le dépôt reste 100 % agnostique du matériel et de la gouvernance client.

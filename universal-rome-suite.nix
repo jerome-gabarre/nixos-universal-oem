@@ -339,13 +339,14 @@ let
     categories = [ "System" "Utility" ];
   };
 
-  # 2. BINAIRE ELF RUST NATIF : Démon de Réconciliation GitOps Universel (x86_64 & aarch64)
+  # 2. BINAIRE ELF RUST NATIF : Démon Hybride (Mode 1 Souverain NixOS Officiel / Mode 2 & 3 Flotte GitOps)
   osGitopsReconciler = pkgs.writers.writeRustBin "os-gitops-reconciler" {} ''
     use std::fs;
     use std::path::Path;
     use std::process::Command;
 
     const GIT: &str = "${pkgs.git}/bin/git";
+    const NIX: &str = "${pkgs.nix}/bin/nix";
     const NIXOS_REBUILD: &str = "${pkgs.nixos-rebuild}/bin/nixos-rebuild";
     const NIXOS_GEN_CFG: &str = "${pkgs.nixos-install-tools}/bin/nixos-generate-config";
 
@@ -380,20 +381,28 @@ let
             "aarch64" => "universal-arm64",
             _ => "universal",
         };
+        let flake_uri = format!("/etc/nixos#{}", flake_target);
+        let force_apply = std::env::args().any(|a| a == "--force");
 
         let remote_cfg = fs::read_to_string("/etc/nixos/gitops-remote.url")
             .unwrap_or_default()
             .trim()
             .to_string();
 
-        if !remote_cfg.is_empty() && !Path::new("/etc/nixos/.git").exists() {
-            let _ = run_status(GIT, &["init"], repo_dir);
-            let _ = run_status(GIT, &["remote", "add", "origin", &remote_cfg], repo_dir);
-        }
+        // CAS A : Mode Flotte GitOps (uniquement si /etc/nixos/gitops-remote.url est défini)
+        if !remote_cfg.is_empty() {
+            if !Path::new("/etc/nixos/.git").exists() {
+                let _ = run_status(GIT, &["init", "-b", "main"], repo_dir);
+                let _ = run_status(GIT, &["remote", "add", "origin", &remote_cfg], repo_dir);
+            }
 
-        let force_apply = std::env::args().any(|a| a == "--force");
+            // Protection contre l'écrasement de modifications locales en cours
+            let dirty = run_output(GIT, &["status", "--porcelain"], repo_dir);
+            if !dirty.is_empty() && !force_apply {
+                println!("[GitOps Rust] Modifications locales détectées dans /etc/nixos : synchronisation distante ignorée par sécurité.");
+                return;
+            }
 
-        if Path::new("/etc/nixos/.git").exists() {
             if run_status(GIT, &["fetch", "--all", "--prune"], repo_dir) {
                 let local_rev = run_output(GIT, &["rev-parse", "HEAD"], repo_dir);
                 let remote_rev = run_output(GIT, &["rev-parse", "@{u}"], repo_dir);
@@ -404,18 +413,25 @@ let
                 }
 
                 if !remote_rev.is_empty() && local_rev != remote_rev {
-                    println!("[GitOps Rust] Nouveau commit détecté ({} -> {}), mise à jour...", local_rev, remote_rev);
+                    println!("[GitOps Rust] Nouveau commit validé détecté ({} -> {}), mise à jour...", local_rev, remote_rev);
                     let _ = run_status(GIT, &["reset", "--hard", "@{u}"], repo_dir);
                 }
             }
-        } else if !force_apply {
-            println!("[GitOps Rust] Aucun dépôt distant configuré dans /etc/nixos (.git ou /etc/nixos/gitops-remote.url).");
-            return;
+        } else {
+            // CAS B : Mode Souverain Autonome (Dons, Particuliers B2C, Entreprises sans serveur Git externe)
+            if !force_apply {
+                println!("[Mode Souverain Rust] Aucun dépôt tiers lié. Vérification des mises à jour de sécurité officielles NixOS...");
+                let before_lock = fs::read_to_string("/etc/nixos/flake.lock").unwrap_or_default();
+                let _ = run_status(NIX, &["--extra-experimental-features", "nix-command flakes", "flake", "update", "--flake", repo_dir], repo_dir);
+                let after_lock = fs::read_to_string("/etc/nixos/flake.lock").unwrap_or_default();
+                if before_lock == after_lock {
+                    println!("[Mode Souverain Rust] Le système est déjà à jour avec le canal officiel NixOS.");
+                    return;
+                }
+            }
         }
 
-        let flake_uri = format!("/etc/nixos#{}", flake_target);
         println!("[GitOps Rust] Application déclarative de {}...", flake_uri);
-
         let ok = Command::new(NIXOS_REBUILD)
             .args(["switch", "--flake", &flake_uri, "--impure"])
             .status()
@@ -423,9 +439,9 @@ let
             .unwrap_or(false);
 
         if ok {
-            println!("[GitOps Rust] Réconciliation GitOps réussie sur la cible {}.", flake_target);
+            println!("[GitOps Rust] Mise à jour atomique réussie sur la cible {}.", flake_target);
         } else {
-            eprintln!("[GitOps Rust] Échec de la réconciliation : la génération précédente reste active.");
+            eprintln!("[GitOps Rust] Échec de la mise à jour : la génération précédente reste intacte.");
             std::process::exit(1);
         }
     }
@@ -584,10 +600,10 @@ in
   networking.firewall.allowedUDPPorts = [ 21119 ];
 
   # =========================================================================
-  # 2. RÉCONCILIATEUR GITOPS AUTOMATIQUE (EXÉCUTÉ SUR LES E-CORES)
+  # 2. RÉCONCILIATEUR HYBRIDE (SOUVERAIN NIXOS / GITOPS SUR LES E-CORES)
   # =========================================================================
   systemd.services.os-gitops-reconciler = {
-    description = "Réconciliateur GitOps Universel NixOS en Rust Natif (Pull & Switch Automatique)";
+    description = "Moteur de Mise à Jour Atomique & Réconciliation GitOps en Rust Natif";
     after = [ "network-online.target" "hardware-max-overdrive.service" ];
     wants = [ "network-online.target" ];
     path = with pkgs; [ git nix nixos-rebuild nixos-install-tools coreutils systemd ];

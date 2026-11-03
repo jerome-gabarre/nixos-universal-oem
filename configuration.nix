@@ -440,6 +440,7 @@ EOF
 
       useradd -m -G wheel,disk,networkmanager,systemd-journal,video,podman,lp,scanner -s /run/current-system/sw/bin/bash utilisateur
       echo "utilisateur:bienvenu" | chpasswd
+      rm -rf /etc/nixos/.git /etc/nixos/gitops-remote.url
       chown -R utilisateur:users /etc/nixos
 
       systemctl reboot
