@@ -42,9 +42,9 @@ Exécutez ce bloc unique dans un terminal :
 
     sudo mv /etc/nixos/hardware-configuration.nix /tmp/hardware-configuration.nix.keep
     sudo rm -rf /etc/nixos/* /etc/nixos/.* 2>/dev/null || true
-    sudo git clone [https://github.com/jerome-gabarre/nixos-universal-oem.git](https://github.com/jerome-gabarre/nixos-universal-oem.git) /etc/nixos
+    sudo git clone https://github.com/jerome-gabarre/nixos-universal-oem.git /etc/nixos
     sudo mv /tmp/hardware-configuration.nix.keep /etc/nixos/hardware-configuration.nix
-    echo "[https://github.com/jerome-gabarre/nixos-universal-oem.git](https://github.com/jerome-gabarre/nixos-universal-oem.git)" | sudo tee /etc/nixos/gitops-remote.url
+    echo "https://github.com/jerome-gabarre/nixos-universal-oem.git" | sudo tee /etc/nixos/gitops-remote.url
     sudo git config --system --add safe.directory /etc/nixos
     sudo nixos-rebuild switch --flake /etc/nixos#universal --impure
 
