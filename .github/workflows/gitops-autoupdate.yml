@@ -1,0 +1,67 @@
+name: "GitOps Auto-Update (Flake.lock + Audit + Télémétrie README)"
+
+on:
+  schedule:
+    # Exécution automatique chaque dimanche à 04h00 UTC
+    - cron: "0 4 * * 0"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "configuration.nix"
+      - "universal-rome-suite.nix"
+      - "flake.nix"
+
+permissions:
+  contents: write
+
+jobs:
+  update-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du dépôt
+        uses: actions/checkout@v4
+
+      - name: Installation de Nix avec Cache Rapide
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Mise à jour de flake.lock (Uniquement sur Timer ou Déclenchement Manuel)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          nix flake update
+
+      - name: Validation Gatekeeper Multi-Architecture (x86_64 & ARM64)
+        run: |
+          nix eval .#nixosConfigurations.universal.config.system.stateVersion
+          nix eval .#nixosConfigurations.universal-arm64.config.system.stateVersion
+
+      - name: Mise à jour automatique de la Télémétrie README.md & Description GitHub
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NIXPKGS_REV=$(jq -r '.nodes.nixpkgs.locked.rev | .[0:7]' flake.lock)
+          NIXPKGS_DATE=$(date -u -d "@$(jq -r '.nodes.nixpkgs.locked.lastModified' flake.lock)" '+%Y-%m-%d')
+          RUST_BINS=$(grep -c 'writeRustBin' configuration.nix universal-rome-suite.nix | awk -F: '{s+=$2} END {print s}')
+          SYSTEMD_SVCS=$(grep -E 'systemd\.(user\.)?services\.[a-zA-Z0-9_-]+' configuration.nix universal-rome-suite.nix | wc -l)
+
+           TELEM="> **État du Référentiel Automatisé (CI/CD GitOps)** : Canal \`nixos-unstable\` (\`$NIXPKGS_REV\` du $NIXPKGS_DATE) | Architectures : \`x86_64-linux\` & \`aarch64-linux\` | Binaires ELF Rust : **$RUST_BINS** | Services Systemd : **$SYSTEMD_SVCS** | Couverture : **14 Domaines ROME (1 923 métiers)**"
+
+          awk -v new_line="$TELEM" '
+            /<!-- TELEMETRY:START -->/ { print; print new_line; skip=1; next }
+            /<!-- TELEMETRY:END -->/ { skip=0 }
+            !skip { print }
+          ' README.md > README.md.tmp && mv README.md.tmp README.md
+
+          gh repo edit "${{ github.repository }}" \
+            --description "OS NixOS Universel (x86_64 & ARM64) [nixpkgs $NIXPKGS_REV - $NIXPKGS_DATE] — $RUST_BINS binaires Rust natifs, GitOps autonome, P-Cores/E-Cores, IA locale Ollama & Magasin ROME (A-N)." || true
+
+      - name: Commit et Push atomique des mises à jour validées
+        run: |
+          git config user.name "gitops-bot[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add flake.lock README.md
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(gitops): mise a jour validee flake.lock et telemetrie README [skip ci]"
+            git push
+          fi

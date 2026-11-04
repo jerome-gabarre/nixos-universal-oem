@@ -335,7 +335,7 @@ let
     desktopName = "Bibliothèque Logicielle Métier (ROME A–N)";
     comment = "Piocher, installer ou lancer à la volée les logiciels des 14 grands domaines métiers ROME";
     exec = "${romeSoftwareStore}/bin/rome-software-store";
-    icon = "system-software-install";
+    icon = "rome-store-hub";
     categories = [ "System" "Utility" ];
   };
 

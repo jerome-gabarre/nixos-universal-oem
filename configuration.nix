@@ -37,7 +37,25 @@ let
     </svg>
     EOF
 
-    cat << 'EOF' > $out/share/icons/hicolor/scalable/apps/cloud-universal-hub.svg
+    cat << 'EOF' > /share/icons/hicolor/scalable/apps/rome-store-hub.svg
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <rect width="56" height="56" x="4" y="4" rx="16" fill="#0D9488"/>
+      <rect width="16" height="16" x="14" y="14" rx="4" fill="#FFFFFF"/>
+      <rect width="16" height="16" x="34" y="14" rx="4" fill="#99F6E4"/>
+      <rect width="16" height="16" x="14" y="34" rx="4" fill="#99F6E4"/>
+      <rect width="16" height="16" x="34" y="34" rx="4" fill="#FACC15"/>
+    </svg>
+    EOF
+
+    cat << 'EOF' > /share/icons/hicolor/scalable/apps/oem-welcome-wizard.svg
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <rect width="56" height="56" x="4" y="4" rx="16" fill="#4F46E5"/>
+      <circle cx="32" cy="32" r="18" fill="none" stroke="#E0E7FF" stroke-width="3"/>
+      <polygon points="32,14 38,28 50,32 38,36 32,50 26,36 14,32 26,28" fill="#FDE047"/>
+    </svg>
+    EOF
+
+    cat << 'EOF' > /share/icons/hicolor/scalable/apps/cloud-universal-hub.svg
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect width="56" height="56" x="4" y="4" rx="16" fill="#0284C7"/>
       <path d="M22 44 H44 C49.5 44 54 39.5 54 34 C54 29 50.2 24.8 45.3 24.1 C43.4 17.2 37.1 12 29.5 12 C20.4 12 13 19.4 13 28.5 C13 29.1 13 29.7 13.1 30.3 C9.6 31.8 7 35.3 7 39.5 C7 45 11.5 44 22 44 Z" fill="#FFFFFF"/>
@@ -410,7 +428,7 @@ EOF
     desktopName = "Guide de Première Installation";
     comment = "Assistant d'accueil, de configuration et de calibrage IA";
     exec = "${oemFirstBootWizard}/bin/oem-first-boot-wizard";
-    icon = "preferences-system-startup";
+    icon = "oem-welcome-wizard";
     categories = [ "System" "Settings" ];
   };
 
@@ -467,7 +485,7 @@ EOF
     kwriteconfig6 --file baloofilerc --group "Basic Settings" --key "Indexing-Enabled" false
     kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock false
 
-    if [ ! -f "$HOME/.config/win11-panel-configured-v3" ]; then
+    if [ ! -f "$HOME/.config/win11-panel-configured-v4" ]; then
       rm -f "$HOME/.cache/icon-cache.kcache"
       qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript '
         var allPanels = panels();
@@ -492,6 +510,7 @@ EOF
           "applications:ai-sidebar.desktop",
           "applications:ai-model-selector.desktop",
           "applications:cloud-accounts-manager.desktop",
+          "applications:oem-first-boot-wizard.desktop",
           "applications:systemsettings.desktop",
           "applications:Alacritty.desktop"
         ]);
@@ -499,10 +518,18 @@ EOF
         panel.addWidget("org.kde.plasma.systemtray");
         panel.addWidget("org.kde.plasma.digitalclock");
         panel.addWidget("org.kde.plasma.showdesktop");
-      ' 2>/dev/null && touch "$HOME/.config/win11-panel-configured-v3" || true
+      ' 2>/dev/null && touch "$HOME/.config/win11-panel-configured-v4" || true
     fi
 
-    if [ ! -f "$HOME/.config/oem-wizard-completed" ]; then
+    for DDIR in "/Bureau" "/Desktop"; do
+      if [ -d "" ]; then
+        cp -f /run/current-system/sw/share/applications/rome-universal-launcher.desktop "/" 2>/dev/null || true
+        cp -f /run/current-system/sw/share/applications/oem-first-boot-wizard.desktop "/" 2>/dev/null || true
+        chmod +x "/rome-universal-launcher.desktop" "/oem-first-boot-wizard.desktop" 2>/dev/null || true
+      fi
+    done
+
+    if [ ! -f "/.config/oem-wizard-completed" ]; then
       ${oemFirstBootWizard}/bin/oem-first-boot-wizard &
     fi
   '';
