@@ -1,5 +1,9 @@
 # NixOS Universal OEM — Architecture Pyramidale Souveraine (`x86_64` & `aarch64`)
 
+<!-- TELEMETRY:START -->
+> **État du Référentiel Automatisé (CI/CD GitOps)** : Initialisation en cours...
+<!-- TELEMETRY:END -->
+
 Système d'exploitation **NixOS déclaratif, universel et agnostique**, conçu pour fonctionner à performance maximale et sans fuite mémoire sur n'importe quel PC portable, station de travail, serveur ou machine reconditionnée (`x86_64-linux` et `aarch64-linux`).
 
 ---
