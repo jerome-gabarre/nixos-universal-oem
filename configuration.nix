@@ -1271,7 +1271,10 @@ EOF
   # =========================================================================
   # 4. ARCHITECTURE PYRAMIDALE, ANTI-FUITE MÉMOIRE & AUTO-RÉPARATION (100% RUST ELF)
   # =========================================================================
-  nixpkgs.config.allowUnfree = true;
+  nixpkgs.config = {
+  allowUnfree = true;
+  problems.handlers.posthog.broken = "ignore";
+};
 
   boot.loader.systemd-boot.enable = lib.mkDefault true;
   boot.loader.efi.canTouchEfiVariables = lib.mkDefault true;
