@@ -1,7 +1,7 @@
 # NixOS Universal OEM — Architecture Pyramidale Souveraine (`x86_64` & `aarch64`)
 
 <!-- TELEMETRY:START -->
-> **État du Référentiel Automatisé (CI/CD GitOps)** : Canal `nixos-unstable` (`0bb2eed` du 2026-11-01) | Architectures : `x86_64-linux` & `aarch64-linux` | Binaires ELF Rust : **13** | Services Systemd : **23** | Couverture : **14 Domaines ROME (1 923 métiers)**
+> **État du Référentiel Automatisé (CI/CD GitOps)** : Canal `nixos-unstable` (`fe13242` du 2026-10-15) | Architectures : `x86_64-linux` & `aarch64-linux` | Binaires ELF Rust : **13** | Services Systemd : **23** | Couverture : **14 Domaines ROME (1 923 métiers)**
 <!-- TELEMETRY:END -->
 
 Système d'exploitation **NixOS déclaratif, universel et agnostique**, conçu pour fonctionner à performance maximale et sans fuite mémoire sur n'importe quel PC portable, station de travail, serveur ou machine reconditionnée (`x86_64-linux` et `aarch64-linux`).
