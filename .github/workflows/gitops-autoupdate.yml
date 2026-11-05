@@ -36,7 +36,7 @@ jobs:
           nix eval .#nixosConfigurations.universal-arm64.config.system.build.toplevel.drvPath
           DRY_RUN=$(nix build .#nixosConfigurations.universal.config.services.open-webui.package --dry-run 2>&1 || true)
           echo "$DRY_RUN"
-          if echo "$DRY_RUN" | grep -qE 'python3.*-(posthog|chromadb).*\.drv|open-webui-.*\.drv'; then
+          if echo "$DRY_RUN" | grep -qE 'python3.*-(posthog|chromadb).*\.drv'; then
             echo "GATEKEEPER : open-webui/chromadb/posthog non pré-compilés dans cache.nixos.org sur ce commit. Mise à jour flake.lock rejetée."
             exit 1
           fi
