@@ -97,12 +97,15 @@ let
 
         if let Ok(home) = std::env::var("HOME") {
             let h = PathBuf::from(home);
-            clean_singleton_lock(&h.join(".config/google-chrome"), &current_host);
+            clean_singleton_lock(&h.join(".config/google-chrome
+    onlyoffice-desktopeditors"), &current_host);
             clean_singleton_lock(&h.join(".local/share/ai-sidebar-profile"), &current_host);
         }
 
         let user_args: Vec<String> = std::env::args().skip(1).collect();
-        for bin in ["google-chrome-stable", "chromium"] {
+        for bin in ["google-chrome
+    onlyoffice-desktopeditors-stable", "chromium
+    libreoffice-qt"] {
             let mut cmd = Command::new(bin);
             cmd.args([
                 "--ozone-platform=x11",
@@ -503,7 +506,8 @@ EOF
         var tasks = panel.addWidget("org.kde.plasma.icontasks");
         tasks.currentConfigGroup = ["General"];
         tasks.writeConfig("launchers", [
-          "applications:google-chrome.desktop",
+          "applications:google-chrome
+    onlyoffice-desktopeditors.desktop",
           "applications:org.kde.dolphin.desktop",
           "applications:onlyoffice-desktopeditors.desktop",
           "applications:rome-universal-launcher.desktop",
@@ -2401,9 +2405,12 @@ EOF
   xdg.mime = {
     enable = true;
     defaultApplications = {
-      "text/html" = "google-chrome.desktop";
-      "x-scheme-handler/http" = "google-chrome.desktop";
-      "x-scheme-handler/https" = "google-chrome.desktop";
+      "text/html" = "google-chrome
+    onlyoffice-desktopeditors.desktop";
+      "x-scheme-handler/http" = "google-chrome
+    onlyoffice-desktopeditors.desktop";
+      "x-scheme-handler/https" = "google-chrome
+    onlyoffice-desktopeditors.desktop";
       "x-scheme-handler/mailto" = "thunderbird.desktop";
       "application/pdf" = "org.kde.okular.desktop";
       "application/x-ms-dos-executable" = "wine.desktop";
@@ -2544,12 +2551,14 @@ EOF
   ++ (optionalKdePkg "signon-kwallet-extension")
   ++ lib.optionals isX86 (with pkgs; [
     google-chrome
+    onlyoffice-desktopeditors
     wineWow64Packages.staging
     winetricks
     bottles
   ])
   ++ lib.optionals isAarch64 (with pkgs; [
     chromium
+    libreoffice-qt
   ]);
 
   system.stateVersion = "26.05";
