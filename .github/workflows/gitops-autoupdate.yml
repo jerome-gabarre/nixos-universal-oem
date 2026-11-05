@@ -1,8 +1,7 @@
-name: "GitOps Auto-Update (Flake.lock + Audit + Télémétrie README)"
+name: "GitOps Auto-Update (Flake.lock + Audit Cache Binaire + Télémétrie README)"
 
 on:
   schedule:
-    # Exécution automatique chaque dimanche à 04h00 UTC
     - cron: "0 4 * * 0"
   workflow_dispatch:
   push:
@@ -23,18 +22,24 @@ jobs:
       - name: Checkout du dépôt
         uses: actions/checkout@v4
 
-      - name: Installation de Nix avec Cache Rapide
+      - name: Installation de Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Mise à jour de flake.lock (Uniquement sur Timer ou Déclenchement Manuel)
+      - name: Mise à jour de flake.lock (Timer ou Manuel)
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: |
           nix flake update
 
-      - name: Validation Gatekeeper Multi-Architecture (x86_64 & ARM64)
+      - name: Validation Gatekeeper Multi-Arch & Vérification du Cache Binaire Hydra (cache.nixos.org)
         run: |
           nix eval .#nixosConfigurations.universal.config.system.build.toplevel.drvPath
           nix eval .#nixosConfigurations.universal-arm64.config.system.build.toplevel.drvPath
+          DRY_RUN=$(nix build .#nixosConfigurations.universal.config.services.open-webui.package --dry-run 2>&1 || true)
+          echo "$DRY_RUN"
+          if echo "$DRY_RUN" | grep -qE 'python3.*-(posthog|chromadb).*\.drv|open-webui-.*\.drv'; then
+            echo "GATEKEEPER : open-webui/chromadb/posthog non pré-compilés dans cache.nixos.org sur ce commit. Mise à jour flake.lock rejetée."
+            exit 1
+          fi
 
       - name: Mise à jour automatique de la Télémétrie README.md & Description GitHub
         env:
@@ -45,7 +50,7 @@ jobs:
           RUST_BINS=$(grep -c 'writeRustBin' configuration.nix universal-rome-suite.nix | awk -F: '{s+=$2} END {print s}')
           SYSTEMD_SVCS=$(grep -E 'systemd\.(user\.)?services\.[a-zA-Z0-9_-]+' configuration.nix universal-rome-suite.nix | wc -l)
 
-           TELEM="> **État du Référentiel Automatisé (CI/CD GitOps)** : Canal \`nixos-unstable\` (\`$NIXPKGS_REV\` du $NIXPKGS_DATE) | Architectures : \`x86_64-linux\` & \`aarch64-linux\` | Binaires ELF Rust : **$RUST_BINS** | Services Systemd : **$SYSTEMD_SVCS** | Couverture : **14 Domaines ROME (1 923 métiers)**"
+          TELEM="> **État du Référentiel Automatisé (CI/CD GitOps)** : Canal \`nixos-unstable\` (\`$NIXPKGS_REV\` du $NIXPKGS_DATE) | Architectures : \`x86_64-linux\` & \`aarch64-linux\` | Binaires ELF Rust : **$RUST_BINS** | Services Systemd : **$SYSTEMD_SVCS** | Couverture : **14 Domaines ROME (1 923 métiers)**"
 
           awk -v new_line="$TELEM" '
             /<!-- TELEMETRY:START -->/ { print; print new_line; skip=1; next }

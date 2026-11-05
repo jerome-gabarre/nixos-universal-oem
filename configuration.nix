@@ -1,5 +1,5 @@
 # /etc/nixos/configuration.nix
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, options, ... }:
 
 let
   isX86 = pkgs.stdenv.hostPlatform.isx86_64;
@@ -1272,9 +1272,12 @@ EOF
   # 4. ARCHITECTURE PYRAMIDALE, ANTI-FUITE MÉMOIRE & AUTO-RÉPARATION (100% RUST ELF)
   # =========================================================================
   nixpkgs.config = {
-  allowUnfree = true;
-  problems.handlers.posthog.broken = "ignore";
-};
+    allowUnfree = true;
+    problems.handlers = {
+      posthog.broken = "ignore";
+      "gtk+".broken = "ignore";
+    };
+  };
 
   boot.loader.systemd-boot.enable = lib.mkDefault true;
   boot.loader.efi.canTouchEfiVariables = lib.mkDefault true;
@@ -1998,13 +2001,20 @@ EOF
   services.avahi = {
     enable = true;
     nssmdns4 = true;
+    openFirewall = true;
+  } // (if options.services.avahi ? settings then {
+    settings.publish = {
+      "disable-publishing" = false;
+      publish-addresses = true;
+      publish-workstation = true;
+    };
+  } else {
     publish = {
       enable = true;
       addresses = true;
       workstation = true;
     };
-    openFirewall = true;
-  };
+  });
   services.samba-wsdd = {
     enable = true;
     openFirewall = true;
