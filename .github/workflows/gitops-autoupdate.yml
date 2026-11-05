@@ -11,6 +11,8 @@ on:
       - "configuration.nix"
       - "universal-rome-suite.nix"
       - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/gitops-autoupdate.yml"
 
 permissions:
   contents: write
@@ -25,20 +27,33 @@ jobs:
       - name: Installation de Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Mise à jour de flake.lock (Timer ou Manuel)
+      - name: Mise à jour candidate de flake.lock (Timer ou Manuel)
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: |
           nix flake update
 
       - name: Validation Gatekeeper Multi-Arch & Vérification du Cache Binaire Hydra (cache.nixos.org)
         run: |
-          nix eval .#nixosConfigurations.universal.config.system.build.toplevel.drvPath
-          nix eval .#nixosConfigurations.universal-arm64.config.system.build.toplevel.drvPath
+          VALID=1
+          if ! nix eval .#nixosConfigurations.universal.config.system.build.toplevel.drvPath; then
+            VALID=0
+          fi
+          if ! nix eval .#nixosConfigurations.universal-arm64.config.system.build.toplevel.drvPath; then
+            VALID=0
+          fi
           DRY_RUN=$(nix build .#nixosConfigurations.universal.config.services.open-webui.package --dry-run 2>&1 || true)
-          echo "$DRY_RUN"
           if echo "$DRY_RUN" | grep -qE 'python3.*-(posthog|chromadb).*\.drv'; then
-            echo "GATEKEEPER : open-webui/chromadb/posthog non pré-compilés dans cache.nixos.org sur ce commit. Mise à jour flake.lock rejetée."
-            exit 1
+            echo "GATEKEEPER : posthog/chromadb non pré-compilés dans cache.nixos.org sur la révision candidate."
+            VALID=0
+          fi
+          if [ "$VALID" -eq 0 ]; then
+            if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              echo "GATEKEEPER : Restauration automatique du flake.lock précédent (100% pré-compilé)."
+              git checkout -- flake.lock
+            else
+              echo "GATEKEEPER : Erreur d'évaluation sur le commit poussé."
+              exit 1
+            fi
           fi
 
       - name: Mise à jour automatique de la Télémétrie README.md & Description GitHub
