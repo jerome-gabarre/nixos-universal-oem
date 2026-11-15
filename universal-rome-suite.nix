@@ -3,6 +3,29 @@
 
 let
   isX86 = pkgs.stdenv.hostPlatform.isx86_64;
+  freecadTurboPkg = pkgs.callPackage ./pkgs/freecad-turbo { };
+
+  # 0. BINAIRE ELF RUST NATIF : Lanceur CFAO FreeCAD Turbo (Spool RAM /dev/shm + oneTBB + CalculiX/Gmsh + mimalloc)
+  freecadTurboLauncher = pkgs.writers.writeRustBin "freecad-turbo" {} ''
+    use std::os::unix::process::CommandExt;
+    use std::process::Command;
+    fn main() {
+        let args: Vec<String> = std::env::args().skip(1).collect();
+        let _ = Command::new("${freecadTurboPkg.freecadNativeLauncher}/bin/freecad-turbo")
+            .args(&args)
+            .exec();
+    }
+  '';
+
+  freecadTurboDesktop = pkgs.makeDesktopItem {
+    name = "freecad-turbo";
+    desktopName = "FreeCAD Turbo CFAO (Rust SIMD & FEM)";
+    comment = "CAO BRep/NURBS, FAO universelle multi-axes (20 dialectes CNC), Nesting 2D et FEM CalculiX en RAM";
+    exec = "${freecadTurboLauncher}/bin/freecad-turbo %F";
+    icon = "freecad";
+    categories = [ "Graphics" "Science" "Engineering" ];
+    mimeTypes = [ "application/x-extension-fcstd" ];
+  };
 
   # 1. BINAIRE ELF RUST NATIF : Magasin & Bibliothèque Logicielle Universelle ROME (14 Grands Domaines A-N)
   romeSoftwareStore = pkgs.writers.writeRustBin "rome-software-store" {} ''
@@ -64,6 +87,11 @@ let
                 ]);
             }
         } else if let Some(first_pkg) = pkgs_list.first() {
+            if *first_pkg == "freecad" || *first_pkg == "freecad-turbo" {
+                notify("Lancement natif haute performance de « FreeCAD Turbo » (Spool RAM /dev/shm)...");
+                let _ = Command::new("${freecadTurboLauncher}/bin/freecad-turbo").spawn();
+                return;
+            }
             notify(&format!("Lancement éphémère en flux tiré de « {} »...", first_pkg));
             let _ = Command::new(NIX_BIN)
                 .args([
@@ -93,7 +121,7 @@ let
                     ("blender", "Blender — Modélisation 3D, sculpture, rendu & bijouterie", "on"),
                     ("darktable", "Darktable — Développement RAW & laboratoire photographique", "off"),
                     ("fontforge", "FontForge — Création typographique & gravure de polices", "off"),
-                    ("freecad", "FreeCAD — Conception paramétrique d'ouvrages d'art", "off"),
+                    ("freecad", "FreeCAD Turbo — Conception paramétrique 3D, FAO & Nesting (Accélérateur Rust SIMD)", "off"),
                 ]
             ),
             "C" => (
@@ -127,7 +155,7 @@ let
             "F" => (
                 "Domaine F — Construction, Bâtiment & Travaux Publics (114 fiches ROME)",
                 vec![
-                    ("freecad", "FreeCAD — Modélisation BIM/CAO 3D bâtiment & charpente", "on"),
+                    ("freecad", "FreeCAD Turbo — Modélisation BIM/CAO 3D, charpente & FEM CalculiX (Rust SIMD)", "on"),
                     ("librecad", "LibreCAD — Plans 2D cotés (DXF/DWG), métrés & schémas électriques", "on"),
                     ("qgis", "QGIS — Géomatique, cadastre, VRD & terrassement", "off"),
                     ("sweet-home-3d", "Sweet Home 3D — Aménagement intérieur & plans d'exécution", "off"),
@@ -144,7 +172,7 @@ let
             "H" => (
                 "Domaine H — Industrie, Usinage, Mécanique & Électronique (280 fiches ROME)",
                 vec![
-                    ("freecad", "FreeCAD — CAO mécanique paramétrique, parcours d'outils FAO/CAM & FEM", "on"),
+                    ("freecad", "FreeCAD Turbo — CFAO universelle 2D/3D/5 axes, Tournage, EDM, Nesting & FEM (Rust SIMD)", "on"),
                     ("openscad", "OpenSCAD — Modélisation 3D industrielle par script déclaratif", "off"),
                     ("librecad", "LibreCAD — Dessin industriel 2D & découpe laser/jet d'eau", "on"),
                     ("kicad", "KiCad — Conception électronique EDA, schémas & routage PCB", "off"),
@@ -673,9 +701,42 @@ in
   # =========================================================================
   programs.wireshark.enable = true;
 
+  systemd.tmpfiles.rules = [
+    "L+ /run/freecad-turbo-bin - - - - ${freecadTurboPkg.freecadRsEngine}/bin"
+    "d /dev/shm/freecad-global-spool 1777 root root -"
+    "d /dev/shm/freecad-global-spool/queue 1777 root root -"
+    "d /dev/shm/freecad-global-spool/results 1777 root root -"
+    "d /var/lib/freecad-projects 0775 root users -"
+  ];
+
+  systemd.services.freecad-local-worker = {
+    description = "Démon Pull-Worker CFAO & FEM en Rust Natif (Spool RAM /dev/shm sur E-Cores)";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network-online.target" "hardware-max-overdrive.service" ];
+    unitConfig.StartLimitIntervalSec = 0;
+    serviceConfig = {
+      EnvironmentFile = "-/run/os-topology/env";
+      ExecStart = "${freecadTurboPkg.freecadRsEngine}/bin/freecad-turbo-worker --mode=hybrid-local --spool-dir=/dev/shm/freecad-global-spool --persist-dir=/var/lib/freecad-projects";
+      Nice = 15;
+      CPUSchedulingPolicy = "idle";
+      IOSchedulingClass = "idle";
+      MemoryHigh = "60%";
+      MemoryMax = "75%";
+      TasksMax = 512;
+      PrivateTmp = false;
+      ProtectSystem = "strict";
+      ReadWritePaths = [ "/dev/shm" "/var/lib/freecad-projects" ];
+      Restart = "always";
+      RestartSec = "500ms";
+    };
+  };
+
   environment.systemPackages = (with pkgs; [
     romeSoftwareStore
     romeSoftwareStoreDesktop
+    freecadTurboLauncher
+    freecadTurboDesktop
+    freecadTurboPkg.freecadRsEngine
     osGitopsReconciler
     wl-clipboard
     xclip

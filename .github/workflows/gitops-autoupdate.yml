@@ -10,6 +10,7 @@ on:
     paths:
       - "configuration.nix"
       - "universal-rome-suite.nix"
+      - "pkgs/**"
       - "flake.nix"
       - "flake.lock"
       - ".github/workflows/gitops-autoupdate.yml"

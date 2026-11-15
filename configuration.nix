@@ -1664,6 +1664,7 @@ EOF
                 "os-gitops-reconciler.service",
                 "dns-threat-sinkhole.service",
                 "update-locatedb.service",
+                "freecad-local-worker.service",
             ];
 
             thread::scope(|s| {
@@ -1722,7 +1723,7 @@ EOF
                 }
             }
 
-            for unit in ["open-webui.service", "clamav-daemon.service", "osqueryd.service", "prometheus-node-exporter.service"] {
+            for unit in ["open-webui.service", "clamav-daemon.service", "osqueryd.service", "prometheus-node-exporter.service", "freecad-local-worker.service"] {
                 let reclaim_path = format!("/sys/fs/cgroup/system.slice/{}/memory.reclaim", unit);
                 let _ = fs::write(&reclaim_path, b"32M\n");
             }
