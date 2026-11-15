@@ -634,7 +634,6 @@ in
     description = "Moteur de Mise à Jour Atomique & Réconciliation GitOps en Rust Natif";
     after = [ "network-online.target" "hardware-max-overdrive.service" ];
     wants = [ "network-online.target" ];
-    wants = [ "network-online.target" ];
     path = with pkgs; [ git nix nixos-rebuild nixos-install-tools coreutils systemd ];
     serviceConfig = {
       Type = "oneshot";
