@@ -634,6 +634,7 @@ in
     description = "Moteur de Mise à Jour Atomique & Réconciliation GitOps en Rust Natif";
     after = [ "network-online.target" "hardware-max-overdrive.service" ];
     wants = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
     path = with pkgs; [ git nix nixos-rebuild nixos-install-tools coreutils systemd ];
     serviceConfig = {
       Type = "oneshot";
@@ -713,6 +714,7 @@ in
     description = "Démon Pull-Worker CFAO & FEM en Rust Natif (Spool RAM /dev/shm sur E-Cores)";
     wantedBy = [ "multi-user.target" ];
     after = [ "network-online.target" "hardware-max-overdrive.service" ];
+    wants = [ "network-online.target" ];
     unitConfig.StartLimitIntervalSec = 0;
     serviceConfig = {
       EnvironmentFile = "-/run/os-topology/env";
